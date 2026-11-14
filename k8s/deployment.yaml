@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enterprise-rag-service
+  labels:
+    app: enterprise-rag-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: enterprise-rag-service
+  template:
+    metadata:
+      labels:
+        app: enterprise-rag-service
+    spec:
+      containers:
+        - name: rag-api
+          image: ghcr.io/ashu02412/enterprise-rag-platform:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: enterprise-rag-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: enterprise-rag-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
